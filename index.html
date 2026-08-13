@@ -355,41 +355,31 @@ textarea:focus-visible {
 .task-main {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   padding: 14px 14px 14px 16px;
 }
 
-.check-btn {
+.done-btn {
   flex: 0 0 auto;
-  width: var(--tap);
-  height: var(--tap);
-  margin: -6px 0 -6px -8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.check-btn span {
-  width: 26px;
-  height: 26px;
-  border: 2px solid var(--brand-light);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--brand-light);
+  align-self: center;
+  min-height: var(--tap);
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-sub);
   font-size: 14px;
-  line-height: 1;
-  font-weight: 700;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.check-btn:active span {
+.done-btn:active {
   background: var(--brand);
   border-color: var(--brand);
   color: #fff;
 }
 
-.check-btn:disabled { opacity: 0.4; }
+.done-btn:disabled { opacity: 0.4; }
 
 .task-body {
   flex: 1 1 auto;
@@ -764,24 +754,6 @@ function buildTaskRow(task) {
   const main = document.createElement('div');
   main.className = 'task-main';
 
-  // 完了ボタン（完了タブでは表示しない）
-  if (!isDone) {
-    const checkBtn = document.createElement('button');
-    checkBtn.type = 'button';
-    checkBtn.className = 'check-btn';
-    checkBtn.setAttribute('aria-label', 'このタスクを完了にする');
-
-    const circle = document.createElement('span');
-    circle.textContent = '✓';
-    checkBtn.appendChild(circle);
-
-    checkBtn.addEventListener('click', function (ev) {
-      ev.stopPropagation();
-      completeTask(task.id, checkBtn);
-    });
-    main.appendChild(checkBtn);
-  }
-
   // 本文（タップでアコーディオン開閉）
   const body = document.createElement('button');
   body.type = 'button';
@@ -835,6 +807,18 @@ function buildTaskRow(task) {
     toggleExpand(task.id);
   });
   main.appendChild(body);
+  // 完了ボタン（行の右端。完了タブでは表示しない）
+  if (!isDone) {
+    const doneBtn = document.createElement('button');
+    doneBtn.type = 'button';
+    doneBtn.className = 'done-btn';
+    doneBtn.textContent = '完了';
+    doneBtn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      completeTask(task.id, doneBtn);
+    });
+    main.appendChild(doneBtn);
+  }
   row.appendChild(main);
 
   /* --- 下段（アコーディオン） --- */
