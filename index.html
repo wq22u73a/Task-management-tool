@@ -114,6 +114,7 @@ textarea:focus-visible {
 }
 
 .reload-btn:active { background: var(--brand-tint); }
+.reload-btn:disabled { opacity: 0.4; }
 
 /* ============================================================
    メッセージ表示
@@ -359,28 +360,6 @@ textarea:focus-visible {
   padding: 14px 14px 14px 16px;
 }
 
-.done-btn {
-  flex: 0 0 auto;
-  align-self: center;
-  min-height: var(--tap);
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--text-sub);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.done-btn:active {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
-}
-
-.done-btn:disabled { opacity: 0.4; }
-
 .task-body {
   flex: 1 1 auto;
   min-width: 0;
@@ -417,6 +396,29 @@ textarea:focus-visible {
 }
 
 .memo-mark { color: var(--accent); }
+
+/* 完了ボタン（行の右端） */
+.done-btn {
+  flex: 0 0 auto;
+  align-self: center;
+  min-height: var(--tap);
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-sub);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.done-btn:active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+.done-btn:disabled { opacity: 0.4; }
 
 /* アコーディオン */
 .task-detail {
@@ -551,16 +553,28 @@ const CONFIG = {
 
 /* ============================================================
    状態
+
+   【取得方針】
+   GAS Web App は1回の呼び出しに2〜15秒かかることが計測で判明したため、
+   タブ・区分フィルタの切替では通信を行わない。
+   起動時にアクティブタスクを全件取得して保持し、
+   絞り込みと並べ替えはクライアント側で行う。
+   完了ログは「完了」タブを最初に開いたときだけ取得する。
    ============================================================ */
 const state = {
-  tab: 'today',        // 'today' | 'all' | 'someday' | 'done'
-  kubun: 'all',        // 'all' | '案件' | '事業活動'
-  addKubun: '案件',    // 追加フォームで選択中の区分
-  tasks: [],           // 現在表示中のタスク配列
-  expandedId: null,    // アコーディオンを開いているタスクID
-  editingId: null,     // メモを編集中のタスクID
-  loading: false,      // 通信中フラグ
-  busy: false          // 個別操作の実行中フラグ
+  tab: 'today',          // 'today' | 'all' | 'someday' | 'done'
+  kubun: 'all',          // 'all' | '案件' | '事業活動'
+  addKubun: '案件',      // 追加フォームで選択中の区分
+
+  activeTasks: [],       // アクティブタスクの全件（サーバーから取得して保持）
+  completedTasks: [],    // 完了ログ（同上）
+  activeLoaded: false,   // アクティブタスクを取得済みか
+  completedLoaded: false,// 完了ログを取得済みか
+
+  expandedId: null,      // アコーディオンを開いているタスクID
+  editingId: null,       // メモを編集中のタスクID
+  loading: false,        // 一覧取得中フラグ
+  busy: false            // 個別操作の実行中フラグ
 };
 
 /* 空状態のメッセージ（タブごと） */
@@ -614,7 +628,8 @@ async function callApi(payload) {
       body: JSON.stringify(Object.assign({ token: CONFIG.API_TOKEN }, payload))
     });
     const json = await res.json();
-    console.log('[計測] ' + payload.action + ': ' + Math.round(performance.now() - startedAt) + 'ms（サーバー ' + (json.serverMs || '?') + 'ms）');
+    console.log('[計測] ' + payload.action + ': ' + Math.round(performance.now() - startedAt)
+      + 'ms（サーバー ' + (json.serverMs !== undefined ? json.serverMs + 'ms' : '未計測') + '）');
     return json;
   } catch (err) {
     console.log('[計測] ' + payload.action + ': 失敗 ' + Math.round(performance.now() - startedAt) + 'ms');
@@ -648,14 +663,14 @@ function showMessage(text, type) {
 
 /**
  * APIのエラー応答を処理する。
- * 「対象のタスクが見つかりません」の場合は一覧を自動で再読込する。
+ * 「対象のタスクが見つかりません」の場合は一覧を再取得する。
  * @param {Object} res APIの応答
  */
 function handleError(res) {
   const msg = res.message || 'エラーが発生しました';
   showMessage(msg);
   if (msg.indexOf('対象のタスクが見つかりません') !== -1) {
-    loadList();
+    fetchActive();
   }
 }
 
@@ -687,34 +702,174 @@ function dueStatus(due) {
   return 'future';
 }
 
+/**
+ * 'yyyy/MM/dd HH:mm' 形式の文字列を比較可能な数値に変換する。
+ * 形式が想定外の場合は0を返す。
+ * @param {string} str 日時文字列
+ * @return {number} 比較用の数値
+ */
+function dateTimeValue(str) {
+  if (!str) return 0;
+  const num = String(str).replace(/[^0-9]/g, '');
+  return num ? Number(num) : 0;
+}
+
 /* ============================================================
-   一覧の取得と描画
+   データ取得（サーバー）
    ============================================================ */
 
 /**
- * 現在のタブと区分フィルタに従って一覧を取得し、描画する。
+ * アクティブタスクを全件取得して保持する。
+ * view と kubun の絞り込みはクライアント側で行うため、
+ * サーバーへは常に view='all', kubun='all' で要求する。
+ * @return {Promise<boolean>} 成功したらtrue
  */
-async function loadList() {
+async function fetchActive() {
   state.loading = true;
   renderList();
 
-  const payload = (state.tab === 'done')
-    ? { action: 'listCompleted', kubun: state.kubun }
-    : { action: 'list', view: state.tab, kubun: state.kubun };
-
-  const res = await callApi(payload);
+  const res = await callApi({ action: 'list', view: 'all', kubun: 'all' });
   state.loading = false;
 
   if (!res.ok) {
-    state.tasks = [];
+    state.activeTasks = [];
+    state.activeLoaded = false;
     renderList();
     showMessage(res.message || 'エラーが発生しました');
-    return;
+    return false;
   }
 
-  state.tasks = res.tasks || [];
+  state.activeTasks = res.tasks || [];
+  state.activeLoaded = true;
+  renderList();
+  return true;
+}
+
+/**
+ * 完了ログを取得して保持する。
+ * @return {Promise<boolean>} 成功したらtrue
+ */
+async function fetchCompleted() {
+  state.loading = true;
+  renderList();
+
+  const res = await callApi({ action: 'listCompleted', kubun: 'all' });
+  state.loading = false;
+
+  if (!res.ok) {
+    state.completedTasks = [];
+    state.completedLoaded = false;
+    renderList();
+    showMessage(res.message || 'エラーが発生しました');
+    return false;
+  }
+
+  state.completedTasks = res.tasks || [];
+  state.completedLoaded = true;
+  renderList();
+  return true;
+}
+
+/**
+ * 現在のタブに必要なデータが未取得なら取得する。
+ * 取得済みなら通信せず、保持データをそのまま描画する。
+ */
+function ensureData() {
+  if (state.tab === 'done') {
+    if (!state.completedLoaded) {
+      fetchCompleted();
+      return;
+    }
+  } else {
+    if (!state.activeLoaded) {
+      fetchActive();
+      return;
+    }
+  }
   renderList();
 }
+
+/**
+ * 保持しているデータをすべて破棄して再取得する。
+ * 更新ボタンと、追加・完了・削除の後に使う。
+ */
+async function reloadAll() {
+  state.completedLoaded = false;
+  state.completedTasks = [];
+
+  if (state.tab === 'done') {
+    await fetchCompleted();
+    state.activeLoaded = false;
+  } else {
+    await fetchActive();
+  }
+}
+
+/* ============================================================
+   絞り込みと並べ替え（クライアント側）
+
+   ※サーバー側 actionList_ / actionListCompleted_ と同一仕様。
+     ビューを追加・変更する場合は両方の修正が必要。
+   ============================================================ */
+
+/**
+ * 現在のタブと区分フィルタに従って、表示するタスク配列を組み立てる。
+ * @return {Array<Object>} 表示対象のタスク配列
+ */
+function buildVisibleTasks() {
+  const today = todayString();
+
+  // 完了タブ：完了日時の降順（サーバー側で降順済みだが念のため）
+  if (state.tab === 'done') {
+    let logs = state.completedTasks.slice();
+    if (state.kubun !== 'all') {
+      logs = logs.filter(function (t) { return t.kubun === state.kubun; });
+    }
+    logs.sort(function (a, b) {
+      return dateTimeValue(b.completedAt) - dateTimeValue(a.completedAt);
+    });
+    return logs;
+  }
+
+  // アクティブタスク
+  let tasks = state.activeTasks.slice();
+
+  if (state.kubun !== 'all') {
+    tasks = tasks.filter(function (t) { return t.kubun === state.kubun; });
+  }
+
+  if (state.tab === 'today') {
+    // 期限が本日以前のもののみ。期限なしは含めない。期限昇順
+    tasks = tasks.filter(function (t) { return t.due && t.due <= today; });
+    tasks.sort(function (a, b) {
+      return a.due < b.due ? -1 : (a.due > b.due ? 1 : 0);
+    });
+
+  } else if (state.tab === 'someday') {
+    // 期限が空欄のもののみ。登録日時の降順
+    tasks = tasks.filter(function (t) { return !t.due; });
+    tasks.sort(function (a, b) {
+      return dateTimeValue(b.createdAt) - dateTimeValue(a.createdAt);
+    });
+
+  } else {
+    // all : 期限昇順。期限なしは末尾（末尾内では登録日時の降順）
+    tasks.sort(function (a, b) {
+      if (!a.due && !b.due) {
+        return dateTimeValue(b.createdAt) - dateTimeValue(a.createdAt);
+      }
+      if (!a.due) return 1;
+      if (!b.due) return -1;
+      return a.due < b.due ? -1 : (a.due > b.due ? 1 : 0);
+    });
+  }
+
+  return tasks;
+}
+
+/* ============================================================
+   描画
+   ============================================================ */
 
 /**
  * 一覧を描画する。
@@ -731,7 +886,9 @@ function renderList() {
     return;
   }
 
-  if (state.tasks.length === 0) {
+  const tasks = buildVisibleTasks();
+
+  if (tasks.length === 0) {
     const box = document.createElement('div');
     box.className = 'empty';
     box.textContent = EMPTY_MESSAGE[state.tab];
@@ -739,7 +896,7 @@ function renderList() {
     return;
   }
 
-  state.tasks.forEach(function (task) {
+  tasks.forEach(function (task) {
     el.list.appendChild(buildTaskRow(task));
   });
 }
@@ -812,6 +969,7 @@ function buildTaskRow(task) {
     toggleExpand(task.id);
   });
   main.appendChild(body);
+
   // 完了ボタン（行の右端。完了タブでは表示しない）
   if (!isDone) {
     const doneBtn = document.createElement('button');
@@ -824,6 +982,7 @@ function buildTaskRow(task) {
     });
     main.appendChild(doneBtn);
   }
+
   row.appendChild(main);
 
   /* --- 下段（アコーディオン） --- */
@@ -927,11 +1086,10 @@ function buildTaskDetail(task, isDone) {
 function toggleExpand(id) {
   if (state.expandedId === id) {
     state.expandedId = null;
-    state.editingId = null;
   } else {
     state.expandedId = id;
-    state.editingId = null;
   }
+  state.editingId = null;
   renderList();
 }
 
@@ -941,6 +1099,8 @@ function toggleExpand(id) {
 
 /**
  * タスクを追加する。
+ * 追加後はアクティブタスクを再取得する
+ * （サーバーが採番したIDと登録日時を正確に保持するため）。
  */
 async function addTask() {
   const name = el.nameInput.value.trim();
@@ -982,11 +1142,13 @@ async function addTask() {
   setDetailOpen(false);
 
   showMessage('追加しました', 'info');
-  loadList();
+  fetchActive();
 }
 
 /**
  * タスクを完了にする。確認は挟まない。
+ * 保持データから該当タスクを取り除くだけで、再取得は行わない
+ * （通信を1回に抑えるため）。完了ログは未取得状態に戻す。
  * @param {string} id タスクID
  * @param {HTMLElement} btn 押されたボタン
  */
@@ -995,19 +1157,22 @@ async function completeTask(id, btn) {
 
   state.busy = true;
   btn.disabled = true;
+  btn.textContent = '…';
 
   const res = await callApi({ action: 'complete', id: id });
 
   state.busy = false;
   btn.disabled = false;
+  btn.textContent = '完了';
 
   if (!res.ok) {
     handleError(res);
     return;
   }
 
-  // 一覧から該当行を取り除く
-  state.tasks = state.tasks.filter(function (t) { return t.id !== id; });
+  state.activeTasks = state.activeTasks.filter(function (t) { return t.id !== id; });
+  state.completedLoaded = false;  // 完了ログは次に開いたとき取り直す
+
   if (state.expandedId === id) {
     state.expandedId = null;
     state.editingId = null;
@@ -1040,7 +1205,7 @@ async function deleteTask(task, btn) {
     return;
   }
 
-  state.tasks = state.tasks.filter(function (t) { return t.id !== task.id; });
+  state.activeTasks = state.activeTasks.filter(function (t) { return t.id !== task.id; });
   state.expandedId = null;
   state.editingId = null;
   renderList();
@@ -1071,8 +1236,8 @@ async function saveMemo(id, memo, btn) {
     return;
   }
 
-  // 手元のデータを更新して再描画する
-  state.tasks = state.tasks.map(function (t) {
+  // 保持データを更新して再描画する
+  state.activeTasks = state.activeTasks.map(function (t) {
     if (t.id === id) { t.memo = memo; }
     return t;
   });
@@ -1134,37 +1299,44 @@ el.detailToggle.addEventListener('click', function () {
   setDetailOpen(!el.detailPanel.classList.contains('is-open'));
 });
 
-// タブ切替
+// タブ切替（通信は「完了」タブの初回のみ）
 el.tabs.addEventListener('click', function (ev) {
   const btn = ev.target.closest('button');
   if (!btn) return;
+  if (state.tab === btn.dataset.tab) return;
+
   state.tab = btn.dataset.tab;
   state.expandedId = null;
   state.editingId = null;
   setActive(el.tabs, btn);
-  loadList();
+  ensureData();
 });
 
-// 区分フィルタ切替
+// 区分フィルタ切替（通信なし）
 el.filters.addEventListener('click', function (ev) {
   const btn = ev.target.closest('button');
   if (!btn) return;
+  if (state.kubun === btn.dataset.kubun) return;
+
   state.kubun = btn.dataset.kubun;
   state.expandedId = null;
   state.editingId = null;
   setActive(el.filters, btn);
-  loadList();
+  renderList();
 });
 
-// 再読み込み
-el.reloadBtn.addEventListener('click', function () {
+// 再読み込み（明示的に取り直す）
+el.reloadBtn.addEventListener('click', async function () {
+  if (state.loading || state.busy) return;
   state.expandedId = null;
   state.editingId = null;
-  loadList();
+  el.reloadBtn.disabled = true;
+  await reloadAll();
+  el.reloadBtn.disabled = false;
 });
 
 // 初期表示
-loadList();
+fetchActive();
 </script>
 
 </body>
