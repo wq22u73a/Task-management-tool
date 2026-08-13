@@ -5,27 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#2C3E50">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFFFFF">
 <title>タスク</title>
 <style>
 /* ============================================================
    デザイントークン
    ============================================================ */
 :root {
-  --navy:        #2C3E50;
-  --navy-dark:   #22303D;
-  --navy-light:  #3E5468;
-  --bg:          #F5F6F7;
-  --surface:     #FFFFFF;
-  --border:      #DDE2E6;
-  --text:        #1F2A33;
-  --text-sub:    #6B7A87;
-  --danger:      #C0392B;
-  --warn:        #D97A1E;
-  --accent:      #7E8FA0;
+  --brand:       #2FA39B;
+  --brand-dark:  #23837C;
+  --brand-light: #5CBCB5;
+  --brand-tint:  rgba(47, 163, 155, 0.10);
 
-  --radius:      10px;
+  --bg:          #F7F5F2;
+  --surface:     #FFFFFF;
+  --border:      #E9E3DC;
+  --text:        #2E2A26;
+  --text-sub:    #7C736B;
+
+  --danger:      #E05C4E;
+  --danger-bg:   #FDEEEC;
+  --danger-line: #F5C6C0;
+  --warn:        #E89A3C;
+  --accent:      #8B7CC8;
+
+  --radius:      16px;
   --tap:         44px;
 
   --safe-top:    env(safe-area-inset-top, 0px);
@@ -69,7 +74,7 @@ button {
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--navy);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 
@@ -77,8 +82,9 @@ textarea:focus-visible {
    ヘッダー
    ============================================================ */
 .app-header {
-  background: var(--navy);
-  color: #fff;
+  background: var(--surface);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
   padding: calc(12px + var(--safe-top)) 16px 12px;
   display: flex;
   align-items: center;
@@ -90,23 +96,24 @@ textarea:focus-visible {
 
 .app-header h1 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 19px;
+  font-weight: 700;
   letter-spacing: 0.04em;
+  color: var(--brand);
 }
 
 .reload-btn {
   min-width: var(--tap);
   min-height: var(--tap);
-  color: #fff;
-  font-size: 20px;
-  border-radius: var(--radius);
+  color: var(--brand);
+  font-size: 21px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.reload-btn:active { background: rgba(255,255,255,0.14); }
+.reload-btn:active { background: var(--brand-tint); }
 
 /* ============================================================
    メッセージ表示
@@ -120,19 +127,19 @@ textarea:focus-visible {
 
 .message {
   margin-top: 8px;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-radius: var(--radius);
   font-size: 15px;
   line-height: 1.5;
-  background: #FDECEA;
+  background: var(--danger-bg);
   color: var(--danger);
-  border: 1px solid #F0BDB6;
+  border: 1px solid var(--danger-line);
 }
 
 .message.is-info {
-  background: #EAF1F7;
-  color: var(--navy);
-  border-color: #C6D6E3;
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+  border-color: var(--brand-light);
 }
 
 /* ============================================================
@@ -141,14 +148,14 @@ textarea:focus-visible {
 .add-form {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 14px 16px 16px;
+  padding: 14px 16px 18px;
 }
 
 .segmented {
   display: flex;
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 999px;
   overflow: hidden;
   background: var(--bg);
 }
@@ -162,11 +169,13 @@ textarea:focus-visible {
   color: var(--text-sub);
   padding: 0 4px;
   white-space: nowrap;
+  border-radius: 999px;
 }
 
 .segmented button.is-active {
-  background: var(--navy);
+  background: var(--brand);
   color: #fff;
+  font-weight: 700;
 }
 
 .name-row {
@@ -179,33 +188,33 @@ textarea:focus-visible {
   flex: 1 1 auto;
   min-width: 0;
   min-height: var(--tap);
-  padding: 0 12px;
+  padding: 0 16px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 999px;
   background: #fff;
 }
 
-.name-row input::placeholder { color: #A9B4BD; }
+.name-row input::placeholder { color: #B5ADA5; }
 
 .add-btn {
   flex: 0 0 auto;
   min-height: var(--tap);
-  padding: 0 20px;
-  background: var(--navy);
+  padding: 0 22px;
+  background: var(--brand);
   color: #fff;
-  border-radius: var(--radius);
-  font-weight: 600;
+  border-radius: 999px;
+  font-weight: 700;
 }
 
-.add-btn:active { background: var(--navy-dark); }
+.add-btn:active { background: var(--brand-dark); }
 .add-btn:disabled { opacity: 0.5; }
 
 .detail-toggle {
   margin-top: 10px;
   min-height: 36px;
-  color: var(--navy);
+  color: var(--brand);
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   padding: 0 2px;
   display: inline-flex;
   align-items: center;
@@ -222,26 +231,26 @@ textarea:focus-visible {
 .detail-panel { display: none; }
 .detail-panel.is-open { display: block; }
 
-.field { margin-top: 12px; }
+.field { margin-top: 14px; }
 
 .field label {
   display: block;
   font-size: 14px;
   color: var(--text-sub);
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
 .field input,
 .field textarea {
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px 16px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: #fff;
 }
 
 .field input { min-height: var(--tap); }
-.field textarea { min-height: 88px; resize: vertical; line-height: 1.6; }
+.field textarea { min-height: 92px; resize: vertical; line-height: 1.6; }
 
 /* ============================================================
    タブ・区分フィルタ
@@ -268,14 +277,14 @@ textarea:focus-visible {
 }
 
 .tabs button.is-active {
-  color: var(--navy);
+  color: var(--brand);
   font-weight: 700;
-  border-bottom-color: var(--navy);
+  border-bottom-color: var(--brand);
 }
 
 .filters {
   display: flex;
-  padding: 10px 16px;
+  padding: 12px 16px;
   gap: 8px;
   background: var(--bg);
 }
@@ -296,10 +305,10 @@ textarea:focus-visible {
 }
 
 .filters button.is-active {
-  background: var(--navy);
-  border-color: var(--navy);
+  background: var(--brand);
+  border-color: var(--brand);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ============================================================
@@ -315,7 +324,7 @@ textarea:focus-visible {
 }
 
 .empty {
-  padding: 48px 16px;
+  padding: 52px 16px;
   text-align: center;
   color: var(--text-sub);
   font-size: 15px;
@@ -329,6 +338,7 @@ textarea:focus-visible {
   margin-bottom: 10px;
   overflow: hidden;
   position: relative;
+  box-shadow: 0 1px 3px rgba(46, 42, 38, 0.05);
 }
 
 /* 区分「事業活動」の識別線 */
@@ -338,7 +348,7 @@ textarea:focus-visible {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
+  width: 4px;
   background: var(--accent);
 }
 
@@ -346,28 +356,39 @@ textarea:focus-visible {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 12px 12px 12px 14px;
+  padding: 14px 14px 14px 16px;
 }
 
 .check-btn {
   flex: 0 0 auto;
   width: var(--tap);
   height: var(--tap);
-  margin: -6px 0 -6px -6px;
+  margin: -6px 0 -6px -8px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .check-btn span {
-  width: 22px;
-  height: 22px;
-  border: 2px solid var(--accent);
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--brand-light);
   border-radius: 50%;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-light);
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
 }
 
-.check-btn:active span { background: var(--navy); border-color: var(--navy); }
+.check-btn:active span {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
 .check-btn:disabled { opacity: 0.4; }
 
 .task-body {
@@ -385,7 +406,7 @@ textarea:focus-visible {
 }
 
 .task-meta {
-  margin-top: 4px;
+  margin-top: 5px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -394,14 +415,14 @@ textarea:focus-visible {
   color: var(--text-sub);
 }
 
-.due.is-overdue { color: var(--danger); font-weight: 600; }
-.due.is-today   { color: var(--warn);   font-weight: 600; }
+.due.is-overdue { color: var(--danger); font-weight: 700; }
+.due.is-today   { color: var(--warn);   font-weight: 700; }
 
 .tag {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 7px;
+  border-radius: 999px;
+  padding: 1px 10px;
   font-size: 12px;
 }
 
@@ -410,8 +431,8 @@ textarea:focus-visible {
 /* アコーディオン */
 .task-detail {
   border-top: 1px solid var(--border);
-  padding: 12px 14px 14px;
-  background: #FAFBFC;
+  padding: 14px 16px 16px;
+  background: #FCFBFA;
 }
 
 .memo-text {
@@ -419,7 +440,7 @@ textarea:focus-visible {
   word-break: break-word;
   font-size: 15px;
   line-height: 1.7;
-  margin: 0 0 12px;
+  margin: 0 0 14px;
 }
 
 .memo-text.is-empty { color: var(--text-sub); }
@@ -427,13 +448,13 @@ textarea:focus-visible {
 .memo-edit {
   width: 100%;
   min-height: 110px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: #fff;
   line-height: 1.6;
   resize: vertical;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .detail-actions {
@@ -444,23 +465,23 @@ textarea:focus-visible {
 
 .detail-actions button {
   min-height: var(--tap);
-  padding: 0 16px;
-  border-radius: var(--radius);
+  padding: 0 20px;
+  border-radius: 999px;
   border: 1px solid var(--border);
   background: #fff;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .detail-actions .primary {
-  background: var(--navy);
-  border-color: var(--navy);
+  background: var(--brand);
+  border-color: var(--brand);
   color: #fff;
 }
 
 .detail-actions .danger {
   color: var(--danger);
-  border-color: #E8C4BF;
+  border-color: var(--danger-line);
   margin-left: auto;
 }
 
@@ -749,7 +770,11 @@ function buildTaskRow(task) {
     checkBtn.type = 'button';
     checkBtn.className = 'check-btn';
     checkBtn.setAttribute('aria-label', 'このタスクを完了にする');
-    checkBtn.appendChild(document.createElement('span'));
+
+    const circle = document.createElement('span');
+    circle.textContent = '✓';
+    checkBtn.appendChild(circle);
+
     checkBtn.addEventListener('click', function (ev) {
       ev.stopPropagation();
       completeTask(task.id, checkBtn);
