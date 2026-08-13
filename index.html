@@ -614,7 +614,7 @@ async function callApi(payload) {
       body: JSON.stringify(Object.assign({ token: CONFIG.API_TOKEN }, payload))
     });
     const json = await res.json();
-    console.log('[計測] ' + payload.action + ': ' + Math.round(performance.now() - startedAt) + 'ms');
+    console.log('[計測] ' + payload.action + ': ' + Math.round(performance.now() - startedAt) + 'ms（サーバー ' + (json.serverMs || '?') + 'ms）');
     return json;
   } catch (err) {
     console.log('[計測] ' + payload.action + ': 失敗 ' + Math.round(performance.now() - startedAt) + 'ms');
