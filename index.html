@@ -619,20 +619,14 @@ async function callApi(payload) {
     return { ok: false, message: 'CONFIG に GAS_URL と API_TOKEN を設定してください' };
   }
 
-  const startedAt = performance.now();
-
   try {
     const res = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(Object.assign({ token: CONFIG.API_TOKEN }, payload))
     });
-    const json = await res.json();
-    console.log('[計測] ' + payload.action + ': ' + Math.round(performance.now() - startedAt)
-      + 'ms（サーバー ' + (json.serverMs !== undefined ? json.serverMs + 'ms' : '未計測') + '）');
-    return json;
+    return await res.json();
   } catch (err) {
-    console.log('[計測] ' + payload.action + ': 失敗 ' + Math.round(performance.now() - startedAt) + 'ms');
     return { ok: false, message: '通信に失敗しました' };
   }
 }
