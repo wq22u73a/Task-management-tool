@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2C3E50">
+<title>タスク</title>
+<style>
+/* ============================================================
+   デザイントークン
+   ============================================================ */
+:root {
+  --navy:        #2C3E50;
+  --navy-dark:   #22303D;
+  --navy-light:  #3E5468;
+  --bg:          #F5F6F7;
+  --surface:     #FFFFFF;
+  --border:      #DDE2E6;
+  --text:        #1F2A33;
+  --text-sub:    #6B7A87;
+  --danger:      #C0392B;
+  --warn:        #D97A1E;
+  --accent:      #7E8FA0;
+
+  --radius:      10px;
+  --tap:         44px;
+
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
+               "Noto Sans JP", "Yu Gothic UI", "Meiryo", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+  padding-bottom: calc(24px + var(--safe-bottom));
+}
+
+button, input, textarea, select {
+  font-family: inherit;
+  font-size: 16px;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   ヘッダー
+   ============================================================ */
+.app-header {
+  background: var(--navy);
+  color: #fff;
+  padding: calc(12px + var(--safe-top)) 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.reload-btn {
+  min-width: var(--tap);
+  min-height: var(--tap);
+  color: #fff;
+  font-size: 20px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reload-btn:active { background: rgba(255,255,255,0.14); }
+
+/* ============================================================
+   メッセージ表示
+   ============================================================ */
+.message-area {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 0 16px;
+}
+
+.message {
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  font-size: 15px;
+  line-height: 1.5;
+  background: #FDECEA;
+  color: var(--danger);
+  border: 1px solid #F0BDB6;
+}
+
+.message.is-info {
+  background: #EAF1F7;
+  color: var(--navy);
+  border-color: #C6D6E3;
+}
+
+/* ============================================================
+   追加フォーム
+   ============================================================ */
+.add-form {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px 16px;
+}
+
+.segmented {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.segmented button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--tap);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-sub);
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.segmented button.is-active {
+  background: var(--navy);
+  color: #fff;
+}
+
+.name-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.name-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.name-row input::placeholder { color: #A9B4BD; }
+
+.add-btn {
+  flex: 0 0 auto;
+  min-height: var(--tap);
+  padding: 0 20px;
+  background: var(--navy);
+  color: #fff;
+  border-radius: var(--radius);
+  font-weight: 600;
+}
+
+.add-btn:active { background: var(--navy-dark); }
+.add-btn:disabled { opacity: 0.5; }
+
+.detail-toggle {
+  margin-top: 10px;
+  min-height: 36px;
+  color: var(--navy);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-toggle .caret {
+  font-size: 12px;
+  transition: transform 0.15s ease;
+}
+
+.detail-toggle.is-open .caret { transform: rotate(90deg); }
+
+.detail-panel { display: none; }
+.detail-panel.is-open { display: block; }
+
+.field { margin-top: 12px; }
+
+.field label {
+  display: block;
+  font-size: 14px;
+  color: var(--text-sub);
+  margin-bottom: 5px;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+}
+
+.field input { min-height: var(--tap); }
+.field textarea { min-height: 88px; resize: vertical; line-height: 1.6; }
+
+/* ============================================================
+   タブ・区分フィルタ
+   ============================================================ */
+.tabs {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tabs button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: var(--tap);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-sub);
+  padding: 0 2px;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+}
+
+.tabs button.is-active {
+  color: var(--navy);
+  font-weight: 700;
+  border-bottom-color: var(--navy);
+}
+
+.filters {
+  display: flex;
+  padding: 10px 16px;
+  gap: 8px;
+  background: var(--bg);
+}
+
+.filters button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 38px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-sub);
+  padding: 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filters button.is-active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ============================================================
+   一覧
+   ============================================================ */
+.list { padding: 0 16px; }
+
+.loading {
+  padding: 32px 0;
+  text-align: center;
+  color: var(--text-sub);
+  font-size: 15px;
+}
+
+.empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--text-sub);
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.task {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 区分「事業活動」の識別線 */
+.task.is-jigyo::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent);
+}
+
+.task-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+}
+
+.check-btn {
+  flex: 0 0 auto;
+  width: var(--tap);
+  height: var(--tap);
+  margin: -6px 0 -6px -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.check-btn span {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  display: block;
+}
+
+.check-btn:active span { background: var(--navy); border-color: var(--navy); }
+.check-btn:disabled { opacity: 0.4; }
+
+.task-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 32px;
+  text-align: left;
+  padding: 0;
+}
+
+.task-name {
+  font-size: 16px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.task-meta {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.due.is-overdue { color: var(--danger); font-weight: 600; }
+.due.is-today   { color: var(--warn);   font-weight: 600; }
+
+.tag {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 12px;
+}
+
+.memo-mark { color: var(--accent); }
+
+/* アコーディオン */
+.task-detail {
+  border-top: 1px solid var(--border);
+  padding: 12px 14px 14px;
+  background: #FAFBFC;
+}
+
+.memo-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+
+.memo-text.is-empty { color: var(--text-sub); }
+
+.memo-edit {
+  width: 100%;
+  min-height: 110px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  line-height: 1.6;
+  resize: vertical;
+  margin-bottom: 12px;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detail-actions button {
+  min-height: var(--tap);
+  padding: 0 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.detail-actions .primary {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.detail-actions .danger {
+  color: var(--danger);
+  border-color: #E8C4BF;
+  margin-left: auto;
+}
+
+.detail-actions button:disabled { opacity: 0.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>タスク</h1>
+  <button class="reload-btn" id="reloadBtn" aria-label="再読み込み">⟳</button>
+</header>
+
+<div class="message-area" id="messageArea"></div>
+
+<section class="add-form">
+  <div class="segmented" id="kubunToggle" role="group" aria-label="区分">
+    <button type="button" data-kubun="案件" class="is-active">案件</button>
+    <button type="button" data-kubun="事業活動">事業活動</button>
+  </div>
+
+  <div class="name-row">
+    <input type="text" id="nameInput" placeholder="タスク名を入力" autocomplete="off">
+    <button type="button" class="add-btn" id="addBtn">追加</button>
+  </div>
+
+  <button type="button" class="detail-toggle" id="detailToggle" aria-expanded="false">
+    <span class="caret">▶</span><span>詳細</span>
+  </button>
+
+  <div class="detail-panel" id="detailPanel">
+    <div class="field">
+      <label for="dueInput">期限日</label>
+      <input type="date" id="dueInput">
+    </div>
+    <div class="field">
+      <label for="tagInput">タグ</label>
+      <input type="text" id="tagInput" placeholder="クライアント名・案件名など" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="memoInput">メモ</label>
+      <textarea id="memoInput" placeholder="詳細・備忘録"></textarea>
+    </div>
+  </div>
+</section>
+
+<nav class="tabs" id="tabs" role="tablist">
+  <button type="button" data-tab="today" class="is-active">今日</button>
+  <button type="button" data-tab="all">全部</button>
+  <button type="button" data-tab="someday">いつか</button>
+  <button type="button" data-tab="done">完了</button>
+</nav>
+
+<div class="filters" id="filters" role="group" aria-label="区分で絞り込み">
+  <button type="button" data-kubun="all" class="is-active">全部</button>
+  <button type="button" data-kubun="案件">案件</button>
+  <button type="button" data-kubun="事業活動">事業活動</button>
+</div>
+
+<main class="list" id="list"></main>
+
+<script>
+/* ============================================================
+   CONFIG : 設定値の一元管理
+   ============================================================ */
+const CONFIG = {
+  // GAS ウェブアプリのURL（.../exec で終わるもの）
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyAq0snmn_xk-O5S-PHdd98ly9ZGK8rVezMqjCMOid1Fz2RQjyiaIHSwJXlBaMX/exec',   // ※要確認
+
+  // 設定シートの API_TOKEN と同じ値
+  API_TOKEN: '93f640f90e9d4f5eaac80c5eadece324'  // ※要確認
+};
+
+/* ============================================================
+   状態
+   ============================================================ */
+const state = {
+  tab: 'today',        // 'today' | 'all' | 'someday' | 'done'
+  kubun: 'all',        // 'all' | '案件' | '事業活動'
+  addKubun: '案件',    // 追加フォームで選択中の区分
+  tasks: [],           // 現在表示中のタスク配列
+  expandedId: null,    // アコーディオンを開いているタスクID
+  editingId: null,     // メモを編集中のタスクID
+  loading: false,      // 通信中フラグ
+  busy: false          // 個別操作の実行中フラグ
+};
+
+/* 空状態のメッセージ（タブごと） */
+const EMPTY_MESSAGE = {
+  today:   '今日やるタスクはありません',
+  all:     'タスクはありません',
+  someday: '期限なしのタスクはありません',
+  done:    '完了したタスクはありません'
+};
+
+/* DOM参照 */
+const el = {
+  messageArea:  document.getElementById('messageArea'),
+  reloadBtn:    document.getElementById('reloadBtn'),
+  kubunToggle:  document.getElementById('kubunToggle'),
+  nameInput:    document.getElementById('nameInput'),
+  addBtn:       document.getElementById('addBtn'),
+  detailToggle: document.getElementById('detailToggle'),
+  detailPanel:  document.getElementById('detailPanel'),
+  dueInput:     document.getElementById('dueInput'),
+  tagInput:     document.getElementById('tagInput'),
+  memoInput:    document.getElementById('memoInput'),
+  tabs:         document.getElementById('tabs'),
+  filters:      document.getElementById('filters'),
+  list:         document.getElementById('list')
+};
+
+let messageTimer = null;
+
+/* ============================================================
+   通信
+   ============================================================ */
+
+/**
+ * GAS ウェブアプリへ POST する。
+ * CORSのプリフライトを避けるため Content-Type は text/plain を使う。
+ * @param {Object} payload token 以外のリクエスト内容
+ * @return {Promise<Object>} {ok:true,...} または {ok:false, message:"..."}
+ */
+async function callApi(payload) {
+  if (!CONFIG.GAS_URL || !CONFIG.API_TOKEN) {
+    return { ok: false, message: 'CONFIG に GAS_URL と API_TOKEN を設定してください' };
+  }
+
+  try {
+    const res = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(Object.assign({ token: CONFIG.API_TOKEN }, payload))
+    });
+    return await res.json();
+  } catch (err) {
+    return { ok: false, message: '通信に失敗しました' };
+  }
+}
+
+/* ============================================================
+   メッセージ表示
+   ============================================================ */
+
+/**
+ * 画面上部にメッセージを数秒間表示する。
+ * @param {string} text 表示する文言
+ * @param {string} type 'error'（既定）または 'info'
+ */
+function showMessage(text, type) {
+  clearTimeout(messageTimer);
+  el.messageArea.textContent = '';
+
+  const box = document.createElement('div');
+  box.className = 'message' + (type === 'info' ? ' is-info' : '');
+  box.setAttribute('role', 'status');
+  box.textContent = text;
+  el.messageArea.appendChild(box);
+
+  messageTimer = setTimeout(function () {
+    el.messageArea.textContent = '';
+  }, 4000);
+}
+
+/**
+ * APIのエラー応答を処理する。
+ * 「対象のタスクが見つかりません」の場合は一覧を自動で再読込する。
+ * @param {Object} res APIの応答
+ */
+function handleError(res) {
+  const msg = res.message || 'エラーが発生しました';
+  showMessage(msg);
+  if (msg.indexOf('対象のタスクが見つかりません') !== -1) {
+    loadList();
+  }
+}
+
+/* ============================================================
+   日付の判定
+   ============================================================ */
+
+/**
+ * 本日の日付を 'yyyy/MM/dd' 形式で返す。
+ * @return {string} 本日の日付文字列
+ */
+function todayString() {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '/' + m + '/' + day;
+}
+
+/**
+ * 期限日の状態を判定する。
+ * @param {string} due 'yyyy/MM/dd' 形式の期限日
+ * @return {string} 'overdue' | 'today' | 'future' | ''
+ */
+function dueStatus(due) {
+  if (!due) return '';
+  const today = todayString();
+  if (due < today) return 'overdue';
+  if (due === today) return 'today';
+  return 'future';
+}
+
+/* ============================================================
+   一覧の取得と描画
+   ============================================================ */
+
+/**
+ * 現在のタブと区分フィルタに従って一覧を取得し、描画する。
+ */
+async function loadList() {
+  state.loading = true;
+  renderList();
+
+  const payload = (state.tab === 'done')
+    ? { action: 'listCompleted', kubun: state.kubun }
+    : { action: 'list', view: state.tab, kubun: state.kubun };
+
+  const res = await callApi(payload);
+  state.loading = false;
+
+  if (!res.ok) {
+    state.tasks = [];
+    renderList();
+    showMessage(res.message || 'エラーが発生しました');
+    return;
+  }
+
+  state.tasks = res.tasks || [];
+  renderList();
+}
+
+/**
+ * 一覧を描画する。
+ * ユーザー入力は textContent で挿入し、innerHTML への代入は行わない。
+ */
+function renderList() {
+  el.list.textContent = '';
+
+  if (state.loading) {
+    const box = document.createElement('div');
+    box.className = 'loading';
+    box.textContent = '読み込み中…';
+    el.list.appendChild(box);
+    return;
+  }
+
+  if (state.tasks.length === 0) {
+    const box = document.createElement('div');
+    box.className = 'empty';
+    box.textContent = EMPTY_MESSAGE[state.tab];
+    el.list.appendChild(box);
+    return;
+  }
+
+  state.tasks.forEach(function (task) {
+    el.list.appendChild(buildTaskRow(task));
+  });
+}
+
+/**
+ * タスク1件分の行要素を生成する。
+ * @param {Object} task タスクデータ
+ * @return {HTMLElement} 行要素
+ */
+function buildTaskRow(task) {
+  const isDone = (state.tab === 'done');
+
+  const row = document.createElement('article');
+  row.className = 'task' + (task.kubun === '事業活動' ? ' is-jigyo' : '');
+
+  /* --- 上段（常時表示） --- */
+  const main = document.createElement('div');
+  main.className = 'task-main';
+
+  // 完了ボタン（完了タブでは表示しない）
+  if (!isDone) {
+    const checkBtn = document.createElement('button');
+    checkBtn.type = 'button';
+    checkBtn.className = 'check-btn';
+    checkBtn.setAttribute('aria-label', 'このタスクを完了にする');
+    checkBtn.appendChild(document.createElement('span'));
+    checkBtn.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      completeTask(task.id, checkBtn);
+    });
+    main.appendChild(checkBtn);
+  }
+
+  // 本文（タップでアコーディオン開閉）
+  const body = document.createElement('button');
+  body.type = 'button';
+  body.className = 'task-body';
+  body.setAttribute('aria-expanded', String(state.expandedId === task.id));
+
+  const nameEl = document.createElement('div');
+  nameEl.className = 'task-name';
+  nameEl.textContent = task.name;
+  body.appendChild(nameEl);
+
+  const meta = document.createElement('div');
+  meta.className = 'task-meta';
+
+  if (isDone) {
+    // 完了タブでは完了日時を表示する
+    if (task.completedAt) {
+      const done = document.createElement('span');
+      done.textContent = '完了 ' + task.completedAt;
+      meta.appendChild(done);
+    }
+  } else if (task.due) {
+    const due = document.createElement('span');
+    const status = dueStatus(task.due);
+    due.className = 'due' + (status === 'overdue' ? ' is-overdue'
+                          : status === 'today'   ? ' is-today' : '');
+    due.textContent = task.due;
+    meta.appendChild(due);
+  }
+
+  if (task.tag) {
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = task.tag;
+    meta.appendChild(tag);
+  }
+
+  if (task.memo) {
+    const mark = document.createElement('span');
+    mark.className = 'memo-mark';
+    mark.textContent = '▸';
+    mark.setAttribute('aria-label', 'メモあり');
+    meta.appendChild(mark);
+  }
+
+  if (meta.childNodes.length > 0) {
+    body.appendChild(meta);
+  }
+
+  body.addEventListener('click', function () {
+    toggleExpand(task.id);
+  });
+  main.appendChild(body);
+  row.appendChild(main);
+
+  /* --- 下段（アコーディオン） --- */
+  if (state.expandedId === task.id) {
+    row.appendChild(buildTaskDetail(task, isDone));
+  }
+
+  return row;
+}
+
+/**
+ * アコーディオン部分（メモ表示・編集・削除）を生成する。
+ * @param {Object} task タスクデータ
+ * @param {boolean} isDone 完了タブかどうか
+ * @return {HTMLElement} 詳細要素
+ */
+function buildTaskDetail(task, isDone) {
+  const detail = document.createElement('div');
+  detail.className = 'task-detail';
+
+  // 編集中：textarea と保存・キャンセル
+  if (state.editingId === task.id) {
+    const textarea = document.createElement('textarea');
+    textarea.className = 'memo-edit';
+    textarea.value = task.memo || '';
+    detail.appendChild(textarea);
+
+    const actions = document.createElement('div');
+    actions.className = 'detail-actions';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = 'primary';
+    saveBtn.textContent = '保存';
+    saveBtn.addEventListener('click', function () {
+      saveMemo(task.id, textarea.value, saveBtn);
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = 'キャンセル';
+    cancelBtn.addEventListener('click', function () {
+      state.editingId = null;
+      renderList();
+    });
+
+    actions.appendChild(saveBtn);
+    actions.appendChild(cancelBtn);
+    detail.appendChild(actions);
+
+    // 編集開始時にカーソルを末尾へ移動する
+    setTimeout(function () {
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }, 0);
+
+    return detail;
+  }
+
+  // 通常表示：メモ本文
+  const memo = document.createElement('p');
+  memo.className = 'memo-text' + (task.memo ? '' : ' is-empty');
+  memo.textContent = task.memo ? task.memo : 'メモなし';
+  detail.appendChild(memo);
+
+  // 完了タブでは編集・削除を出さない
+  if (isDone) {
+    return detail;
+  }
+
+  const actions = document.createElement('div');
+  actions.className = 'detail-actions';
+
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.textContent = '編集';
+  editBtn.addEventListener('click', function () {
+    state.editingId = task.id;
+    renderList();
+  });
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.type = 'button';
+  deleteBtn.className = 'danger';
+  deleteBtn.textContent = '削除';
+  deleteBtn.addEventListener('click', function () {
+    deleteTask(task, deleteBtn);
+  });
+
+  actions.appendChild(editBtn);
+  actions.appendChild(deleteBtn);
+  detail.appendChild(actions);
+
+  return detail;
+}
+
+/**
+ * アコーディオンの開閉を切り替える。
+ * @param {string} id タスクID
+ */
+function toggleExpand(id) {
+  if (state.expandedId === id) {
+    state.expandedId = null;
+    state.editingId = null;
+  } else {
+    state.expandedId = id;
+    state.editingId = null;
+  }
+  renderList();
+}
+
+/* ============================================================
+   操作
+   ============================================================ */
+
+/**
+ * タスクを追加する。
+ */
+async function addTask() {
+  const name = el.nameInput.value.trim();
+
+  if (!name) {
+    showMessage('タスク名を入力してください');
+    el.nameInput.focus();
+    return;
+  }
+  if (state.busy) return;
+
+  state.busy = true;
+  el.addBtn.disabled = true;
+  el.addBtn.textContent = '追加中';
+
+  const res = await callApi({
+    action: 'add',
+    name: name,
+    kubun: state.addKubun,
+    due: el.dueInput.value,
+    tag: el.tagInput.value.trim(),
+    memo: el.memoInput.value
+  });
+
+  state.busy = false;
+  el.addBtn.disabled = false;
+  el.addBtn.textContent = '追加';
+
+  if (!res.ok) {
+    handleError(res);
+    return;
+  }
+
+  // 入力欄をクリアし、詳細を折りたたむ。区分の選択は維持する。
+  el.nameInput.value = '';
+  el.dueInput.value = '';
+  el.tagInput.value = '';
+  el.memoInput.value = '';
+  setDetailOpen(false);
+
+  showMessage('追加しました', 'info');
+  loadList();
+}
+
+/**
+ * タスクを完了にする。確認は挟まない。
+ * @param {string} id タスクID
+ * @param {HTMLElement} btn 押されたボタン
+ */
+async function completeTask(id, btn) {
+  if (state.busy) return;
+
+  state.busy = true;
+  btn.disabled = true;
+
+  const res = await callApi({ action: 'complete', id: id });
+
+  state.busy = false;
+  btn.disabled = false;
+
+  if (!res.ok) {
+    handleError(res);
+    return;
+  }
+
+  // 一覧から該当行を取り除く
+  state.tasks = state.tasks.filter(function (t) { return t.id !== id; });
+  if (state.expandedId === id) {
+    state.expandedId = null;
+    state.editingId = null;
+  }
+  renderList();
+  showMessage('完了しました', 'info');
+}
+
+/**
+ * タスクを削除する。完了ログには残らない。
+ * @param {Object} task タスクデータ
+ * @param {HTMLElement} btn 押されたボタン
+ */
+async function deleteTask(task, btn) {
+  if (state.busy) return;
+  if (!window.confirm('「' + task.name + '」を削除します。\n完了記録には残りません。よろしいですか？')) {
+    return;
+  }
+
+  state.busy = true;
+  btn.disabled = true;
+
+  const res = await callApi({ action: 'delete', id: task.id });
+
+  state.busy = false;
+  btn.disabled = false;
+
+  if (!res.ok) {
+    handleError(res);
+    return;
+  }
+
+  state.tasks = state.tasks.filter(function (t) { return t.id !== task.id; });
+  state.expandedId = null;
+  state.editingId = null;
+  renderList();
+  showMessage('削除しました', 'info');
+}
+
+/**
+ * メモを保存する。
+ * @param {string} id タスクID
+ * @param {string} memo 保存するメモ本文
+ * @param {HTMLElement} btn 押されたボタン
+ */
+async function saveMemo(id, memo, btn) {
+  if (state.busy) return;
+
+  state.busy = true;
+  btn.disabled = true;
+  btn.textContent = '保存中';
+
+  const res = await callApi({ action: 'updateMemo', id: id, memo: memo });
+
+  state.busy = false;
+  btn.disabled = false;
+  btn.textContent = '保存';
+
+  if (!res.ok) {
+    handleError(res);
+    return;
+  }
+
+  // 手元のデータを更新して再描画する
+  state.tasks = state.tasks.map(function (t) {
+    if (t.id === id) { t.memo = memo; }
+    return t;
+  });
+  state.editingId = null;
+  renderList();
+  showMessage('メモを保存しました', 'info');
+}
+
+/* ============================================================
+   UI操作
+   ============================================================ */
+
+/**
+ * 追加フォームの詳細パネルを開閉する。
+ * @param {boolean} open 開くならtrue
+ */
+function setDetailOpen(open) {
+  el.detailPanel.classList.toggle('is-open', open);
+  el.detailToggle.classList.toggle('is-open', open);
+  el.detailToggle.setAttribute('aria-expanded', String(open));
+}
+
+/**
+ * ボタン群の選択状態を切り替える。
+ * @param {HTMLElement} container ボタンの親要素
+ * @param {HTMLElement} target 選択されたボタン
+ */
+function setActive(container, target) {
+  Array.prototype.forEach.call(container.children, function (btn) {
+    btn.classList.toggle('is-active', btn === target);
+  });
+}
+
+/* ============================================================
+   イベント登録
+   ============================================================ */
+
+// 区分トグル（追加フォーム）
+el.kubunToggle.addEventListener('click', function (ev) {
+  const btn = ev.target.closest('button');
+  if (!btn) return;
+  state.addKubun = btn.dataset.kubun;
+  setActive(el.kubunToggle, btn);
+});
+
+// 追加ボタン
+el.addBtn.addEventListener('click', addTask);
+
+// タスク名入力欄で Enter を押したら追加する
+el.nameInput.addEventListener('keydown', function (ev) {
+  if (ev.key === 'Enter') {
+    ev.preventDefault();
+    addTask();
+  }
+});
+
+// 詳細トグル
+el.detailToggle.addEventListener('click', function () {
+  setDetailOpen(!el.detailPanel.classList.contains('is-open'));
+});
+
+// タブ切替
+el.tabs.addEventListener('click', function (ev) {
+  const btn = ev.target.closest('button');
+  if (!btn) return;
+  state.tab = btn.dataset.tab;
+  state.expandedId = null;
+  state.editingId = null;
+  setActive(el.tabs, btn);
+  loadList();
+});
+
+// 区分フィルタ切替
+el.filters.addEventListener('click', function (ev) {
+  const btn = ev.target.closest('button');
+  if (!btn) return;
+  state.kubun = btn.dataset.kubun;
+  state.expandedId = null;
+  state.editingId = null;
+  setActive(el.filters, btn);
+  loadList();
+});
+
+// 再読み込み
+el.reloadBtn.addEventListener('click', function () {
+  state.expandedId = null;
+  state.editingId = null;
+  loadList();
+});
+
+// 初期表示
+loadList();
+</script>
+
+</body>
+</html>
