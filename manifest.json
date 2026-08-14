@@ -1,6 +1,6 @@
 {
   "name": "タスク管理",
-  "short_name": "タスク",
+  "short_name": "タスク管理",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#FFFFFF",
@@ -17,6 +17,18 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
