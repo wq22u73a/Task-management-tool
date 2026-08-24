@@ -440,17 +440,27 @@ textarea:focus-visible {
 
 .memo-text.is-empty { color: var(--text-sub); }
 
-.memo-edit {
-  width: 100%;
-  min-height: 110px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: #fff;
-  line-height: 1.6;
-  resize: vertical;
-  margin-bottom: 14px;
+/* 詳細内の期限日・タグ表示 */
+.task-detail-meta {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-sub);
 }
+
+.task-detail-meta .label { margin-right: 6px; }
+
+.task-detail-meta .value {
+  color: var(--text);
+  word-break: break-word;
+}
+
+/* 詳細内の編集フォーム（追加フォームの .field を流用する） */
+.task-edit { margin-bottom: 14px; }
+
+.task-edit .field:first-child { margin-top: 0; }
+
+.field textarea.memo-edit { min-height: 110px; }
 
 .detail-actions {
   display: flex;
@@ -575,7 +585,7 @@ const state = {
   completedLoaded: false,// 完了ログを取得済みか
 
   expandedId: null,      // アコーディオンを開いているタスクID
-  editingId: null,       // メモを編集中のタスクID
+  editingId: null,       // 編集中のタスクID
   loading: false,        // 一覧取得中フラグ
   busy: false            // 個別操作の実行中フラグ
 };
@@ -697,6 +707,32 @@ function dueStatus(due) {
   if (due < today) return 'overdue';
   if (due === today) return 'today';
   return 'future';
+}
+
+/**
+ * 'yyyy/MM/dd' 形式の期限日を date 入力欄用の 'yyyy-MM-dd' に変換する。
+ * @param {string} due 期限日（空文字可）
+ * @return {string} date入力欄に設定する値。変換できない場合は空文字
+ */
+function toDateInputValue(due) {
+  if (!due) return '';
+  const m = String(due).match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+  if (!m) return '';
+  return m[1] + '-' + m[2].padStart(2, '0') + '-' + m[3].padStart(2, '0');
+}
+
+/**
+ * date 入力欄の 'yyyy-MM-dd' を表示・比較用の 'yyyy/MM/dd' に変換する。
+ * 保持データの期限日は 'yyyy/MM/dd' 形式で統一する必要があるため
+ * （並べ替えと期限判定が文字列比較のため、区切り文字が混ざると誤判定する）。
+ * @param {string} value date入力欄の値（空文字可）
+ * @return {string} 'yyyy/MM/dd' 形式の文字列。空欄なら空文字
+ */
+function toDisplayDate(value) {
+  if (!value) return '';
+  const m = String(value).match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+  if (!m) return '';
+  return m[1] + '/' + m[2].padStart(2, '0') + '/' + m[3].padStart(2, '0');
 }
 
 /**
@@ -991,7 +1027,30 @@ function buildTaskRow(task) {
 }
 
 /**
- * アコーディオン部分（メモ表示・編集・削除）を生成する。
+ * 編集フォームの1項目（ラベル＋入力欄）を組み立てる。
+ * 追加フォームと同じ .field のスタイルを流用する。
+ * @param {string} inputId 入力欄のid（ラベルの関連付けに使う）
+ * @param {string} labelText ラベル文言
+ * @param {HTMLElement} input 入力要素
+ * @return {HTMLElement} フィールド要素
+ */
+function buildEditField(inputId, labelText, input) {
+  const field = document.createElement('div');
+  field.className = 'field';
+
+  const label = document.createElement('label');
+  label.setAttribute('for', inputId);
+  label.textContent = labelText;
+
+  input.id = inputId;
+
+  field.appendChild(label);
+  field.appendChild(input);
+  return field;
+}
+
+/**
+ * アコーディオン部分（詳細表示・編集・削除）を生成する。
  * @param {Object} task タスクデータ
  * @param {boolean} isDone 完了タブかどうか
  * @return {HTMLElement} 詳細要素
@@ -1000,12 +1059,38 @@ function buildTaskDetail(task, isDone) {
   const detail = document.createElement('div');
   detail.className = 'task-detail';
 
-  // 編集中：textarea と保存・キャンセル
+  // 編集中：タスク名・期限日・タグ・メモをまとめて編集する
   if (state.editingId === task.id) {
-    const textarea = document.createElement('textarea');
-    textarea.className = 'memo-edit';
-    textarea.value = task.memo || '';
-    detail.appendChild(textarea);
+    const form = document.createElement('div');
+    form.className = 'task-edit';
+
+    // タスク名（必須）
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = task.name || '';
+    nameInput.autocomplete = 'off';
+    form.appendChild(buildEditField('edit-name-' + task.id, 'タスク名', nameInput));
+
+    // 期限日（空にすることも可能）
+    const dueInput = document.createElement('input');
+    dueInput.type = 'date';
+    dueInput.value = toDateInputValue(task.due);
+    form.appendChild(buildEditField('edit-due-' + task.id, '期限日', dueInput));
+
+    // タグ（任意）
+    const tagInput = document.createElement('input');
+    tagInput.type = 'text';
+    tagInput.value = task.tag || '';
+    tagInput.autocomplete = 'off';
+    form.appendChild(buildEditField('edit-tag-' + task.id, 'タグ', tagInput));
+
+    // メモ（任意）
+    const memoInput = document.createElement('textarea');
+    memoInput.className = 'memo-edit';
+    memoInput.value = task.memo || '';
+    form.appendChild(buildEditField('edit-memo-' + task.id, 'メモ', memoInput));
+
+    detail.appendChild(form);
 
     const actions = document.createElement('div');
     actions.className = 'detail-actions';
@@ -1015,7 +1100,21 @@ function buildTaskDetail(task, isDone) {
     saveBtn.className = 'primary';
     saveBtn.textContent = '保存';
     saveBtn.addEventListener('click', function () {
-      saveMemo(task.id, textarea.value, saveBtn);
+      const name = nameInput.value.trim();
+
+      // タスク名が空のときは通信しない
+      if (!name) {
+        showMessage('タスク名を入力してください');
+        nameInput.focus();
+        return;
+      }
+
+      saveTask(task.id, {
+        name: name,
+        due: dueInput.value,
+        tag: tagInput.value.trim(),
+        memo: memoInput.value
+      }, saveBtn);
     });
 
     const cancelBtn = document.createElement('button');
@@ -1030,16 +1129,51 @@ function buildTaskDetail(task, isDone) {
     actions.appendChild(cancelBtn);
     detail.appendChild(actions);
 
-    // 編集開始時にカーソルを末尾へ移動する
+    // 編集開始時はタスク名にフォーカスし、カーソルを末尾へ移動する
     setTimeout(function () {
-      textarea.focus();
-      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      nameInput.focus();
+      nameInput.setSelectionRange(nameInput.value.length, nameInput.value.length);
     }, 0);
 
     return detail;
   }
 
-  // 通常表示：メモ本文
+  // 通常表示：期限日・タグ・メモ本文
+  const metaBox = document.createElement('div');
+  metaBox.className = 'task-detail-meta';
+
+  const dueRow = document.createElement('div');
+  if (task.due) {
+    const dueLabel = document.createElement('span');
+    dueLabel.className = 'label';
+    dueLabel.textContent = '期限日:';
+    const dueValue = document.createElement('span');
+    dueValue.className = 'value';
+    dueValue.textContent = task.due;
+    dueRow.appendChild(dueLabel);
+    dueRow.appendChild(dueValue);
+  } else {
+    // 期限がない場合は「期限日: 期限なし」とせず、そのまま「期限なし」と出す
+    dueRow.textContent = '期限なし';
+  }
+  metaBox.appendChild(dueRow);
+
+  // タグは値があるときだけ表示する
+  if (task.tag) {
+    const tagRow = document.createElement('div');
+    const tagLabel = document.createElement('span');
+    tagLabel.className = 'label';
+    tagLabel.textContent = 'タグ:';
+    const tagValue = document.createElement('span');
+    tagValue.className = 'value';
+    tagValue.textContent = task.tag;
+    tagRow.appendChild(tagLabel);
+    tagRow.appendChild(tagValue);
+    metaBox.appendChild(tagRow);
+  }
+
+  detail.appendChild(metaBox);
+
   const memo = document.createElement('p');
   memo.className = 'memo-text' + (task.memo ? '' : ' is-empty');
   memo.textContent = task.memo ? task.memo : 'メモなし';
@@ -1210,19 +1344,27 @@ async function deleteTask(task, btn) {
 }
 
 /**
- * メモを保存する。
+ * タスク名・期限日・タグ・メモを保存する。
+ * サーバー側でカレンダーへも即時反映される。
  * @param {string} id タスクID
- * @param {string} memo 保存するメモ本文
+ * @param {Object} values 入力値 {name, due, tag, memo}（due は 'yyyy-MM-dd'）
  * @param {HTMLElement} btn 押されたボタン
  */
-async function saveMemo(id, memo, btn) {
+async function saveTask(id, values, btn) {
   if (state.busy) return;
 
   state.busy = true;
   btn.disabled = true;
   btn.textContent = '保存中';
 
-  const res = await callApi({ action: 'updateMemo', id: id, memo: memo });
+  const res = await callApi({
+    action: 'updateTask',
+    id: id,
+    name: values.name,
+    due: values.due,
+    tag: values.tag,
+    memo: values.memo
+  });
 
   state.busy = false;
   btn.disabled = false;
@@ -1234,13 +1376,20 @@ async function saveMemo(id, memo, btn) {
   }
 
   // 保持データを更新して再描画する
+  // 期限日は 'yyyy/MM/dd' に直してから保持する（並べ替えと期限判定のため）
+  const due = toDisplayDate(values.due);
   state.activeTasks = state.activeTasks.map(function (t) {
-    if (t.id === id) { t.memo = memo; }
+    if (t.id === id) {
+      t.name = values.name;
+      t.due = due;
+      t.tag = values.tag;
+      t.memo = values.memo;
+    }
     return t;
   });
   state.editingId = null;
   renderList();
-  showMessage('メモを保存しました', 'info');
+  showMessage('保存しました', 'info');
 }
 
 /* ============================================================
